@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board">
+    
+    <resultMap type="com.spring.board.vo.BoardVo" id="boardVo">
+    	<result property="boardType" 	column="BOARD_TYPE"/>
+    	<result property="boardNum" 	column="BOARD_NUM"/>
+    	<result property="boardTitle" 	column="BOARD_TITLE"/>
+    	<result property="boardComment" column="BOARD_COMMENT"/>
+    	<result property="boardMenu" column="BOARD_MENU"/>
+    </resultMap>
+    
+    <resultMap type="com.spring.board.vo.BoardMenuVo" id="BoardMenuVo">
+    	<result property="codeType" 	column="CODE_TYPE"/>
+    	<result property="codeId" 	column="CODE_ID"/>
+    	<result property="codeName" 	column="CODE_NAME"/>
+    </resultMap>
+    
+    <!-- 마지막에 ; 세미클론을 넣는 습관 조심 -->
+    <select id="boardList" parameterType="map" resultMap="boardVo">
+        SELECT 
+		   BOARD_TYPE
+		  ,BOARD_NUM
+		  ,BOARD_TITLE
+		  ,BOARD_COMMENT
+		  ,NUMROW
+		  ,TOTAL_CNT
+		  ,(SELECT CODE_NAME FROM COM_CODE WHERE BOARD_TYPE = CODE_ID) AS BOARD_MENU
+		  ,ROWNUM
+		FROM 
+		(
+		  SELECT
+		      	BOARD_TYPE
+				,BOARD_NUM
+				,BOARD_TITLE
+				,BOARD_COMMENT
+		      	,ROW_NUMBER() OVER(ORDER BY BOARD_NUM DESC) AS NUMROW
+		      	,COUNT(*) OVER() AS TOTAL_CNT
+			FROM
+				BOARD	
+			<include refid="serchMunu"></include>
+		)
+		WHERE NUMROW BETWEEN (#{pageNo}-1)*10 + 1 AND (#{pageNo})*10 
+    </select>
+    <!-- 마지막에 ; 세미클론을 넣는 습관 조심 -->
+    <select id="boardMenuSel" resultMap="BoardMenuVo">
+    
+    	SELECT
+    			CODE_TYPE
+    			,CODE_ID
+    			,CODE_NAME
+    	FROM
+    		COM_CODE
+    	WHERE 
+    		CODE_TYPE = 'menu'
+    		
+    </select>
+    <!-- 마지막에 ; 세미클론을 넣는 습관 조심 -->
+    <select id="boardTotal" parameterType="Integer" resultType="Integer">
+		  SELECT
+		      	COUNT(*) AS TOTAL_CNT
+			FROM
+				BOARD	
+    </select>
+    	<!-- 마지막에 ; 세미클론을 넣는 습관 조심 -->
+    <select id="boardView" parameterType="com.spring.board.vo.BoardVo" resultMap="boardVo">
+    	SELECT
+        	 BOARD_TYPE
+			,BOARD_NUM
+			,BOARD_TITLE
+			,BOARD_COMMENT
+			,(SELECT CODE_NAME FROM COM_CODE WHERE BOARD_TYPE = CODE_ID) AS BOARD_MENU
+		FROM
+			BOARD
+    	WHERE 	BOARD_TYPE = #{boardType}
+    	AND 	BOARD_NUM  = #{boardNum}
+    </select>	
+    <!-- 마지막에 ; 세미클론을 넣는 습관 조심 -->
+    <select id="boardInsert" parameterType="com.spring.board.vo.BoardVo">
+	        INSERT INTO 
+	        BOARD
+	        (BOARD_TYPE
+	        ,BOARD_NUM
+	        ,BOARD_TITLE
+	        ,BOARD_COMMENT
+	        ,CREATOR
+	        ,CREATE_TIME
+	        ,MODIFIER
+	        ,MODIFIED_TIME
+	        )
+	        VALUES
+	        (#{boardType}
+	        ,(SELECT NVL(TO_NUMBER(MAX(BOARD_NUM)+1),1)
+		    FROM BOARD)
+	        ,#{boardTitle}
+	        ,#{boardComment}
+	        ,'SYSTEM'
+	        ,TO_CHAR(SYSDATE)
+	        ,'SYSTEM'
+	        ,TO_CHAR(SYSDATE)
+	        )
+    </select>
+    
+    <delete id="boardDelete" parameterType="com.spring.board.vo.BoardVo" >
+   		 DELETE 
+   		 FROM BOARD 
+   		 WHERE BOARD_NUM = #{boardNum} 
+   		 AND BOARD_TYPE = #{boardType}
+    </delete>
+    
+     <!-- 마지막에 ; 세미클론을 넣는 습관 조심 -->
+     <update id="boardUpdate" parameterType="com.spring.board.vo.BoardVo">
+     
+      UPDATE board
+	  SET 
+	  	   BOARD_TYPE = #{boardType}
+		  ,BOARD_TITLE = #{boardTitle}
+		  ,BOARD_COMMENT = #{boardComment}
+		  ,MODIFIED_TIME = TO_CHAR(SYSDATE)
+	  WHERE
+	  	BOARD_NUM = #{boardNum}
+	  	
+     
+     </update>
+     
+     <!-- 마지막에 ; 세미클론을 넣는 습관 조심 -->
+     
+    <sql id="serchMunu">
+    	<if test="boardMenu != null">
+    	  <where>
+    		<foreach collection="boardMenu" item="boardType" open="" separator="OR">
+    	  		 BOARD_TYPE =  #{boardType}
+    	    </foreach>
+    	  </where>
+    	</if>
+	</sql>
+</mapper>
